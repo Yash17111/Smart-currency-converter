@@ -1,0 +1,194 @@
+✅ How the Code Works (Step-by-Step)
+
+Your program is made of multiple Java OOP components + JDBC + Multithreading.
+Here’s the full flow:
+
+1️⃣ User Runs the Program → Main Starts
+
+The main class:
+
+public class SmartCurrencyConverter {
+    public static void main(String[] args) {
+
+
+When the program starts, it:
+
+✔ Creates Scanner for user input
+✔ Creates the CurrencyConverter object
+✔ Loads static rates into a HashMap
+✔ Prepares empty history list
+✔ Prepares DAO for database saving
+
+2️⃣ Static Rates Loaded (OOP + Inheritance)
+
+RateProvider is an abstract class with a rates HashMap.
+
+StaticRateProvider extends it and loads sample rates like:
+
+USD = 1.0
+INR = 83
+EUR = 0.92
+
+
+This happens automatically when the converter is created:
+
+ConverterService converter = new CurrencyConverter(new StaticRateProvider());
+
+3️⃣ User Enters Amount & Currencies
+
+Program asks:
+
+Enter amount:
+From Currency (USD/INR/...):
+To Currency:
+
+
+Scanner reads the three inputs.
+
+If the user enters 0 → program ends.
+
+4️⃣ Conversion Logic (Polymorphism)
+
+CurrencyConverter implements the interface:
+
+double convert(double amount, String from, String to)
+
+
+Steps:
+
+Get rate of “from” currency
+
+Convert amount to USD
+
+usd = amount / rate[from]
+
+
+Convert USD to “to” currency
+
+final = usd * rate[to]
+
+
+Example:
+
+100 USD → INR
+usd = 100 / 1.0
+final = 100 * 83 = 8300
+
+5️⃣ Custom Exception Handling
+
+If user enters something invalid:
+
+INVALID_CURRENCY
+
+
+InvalidCurrencyException is thrown.
+
+Program prints:
+
+Error: Invalid Currency Code
+
+6️⃣ Save Conversion in List (Collections)
+
+The program creates a record:
+
+ConversionRecord record = new ConversionRecord(amount, from, to, result);
+history.add(record);
+
+
+This list is later used by a logging thread.
+
+7️⃣ Save Conversion to MySQL (JDBC)
+
+This code runs:
+
+dao.saveRecord(record);
+
+
+The DAO inserts into database:
+
+INSERT INTO conversion_history(amount, source, target, result)
+VALUES (?,?,?,?)
+
+
+So every conversion gets saved in MySQL automatically.
+
+8️⃣ Logger Thread Starts (Multithreading)
+new LoggerThread(history).start();
+
+
+The LoggerThread runs in the background and prints:
+
+--- Logging Thread Started ---
+Log: 100 USD -> 8300 INR
+
+
+This thread does not block the main program.
+
+9️⃣ Loop Repeats
+
+User can perform unlimited conversions until they enter 0.
+
+🔥 How to Run This Program Correctly
+
+Follow these exact steps:
+
+Step 1: Install MySQL
+
+Create database:
+
+CREATE DATABASE converterdb;
+
+USE converterdb;
+
+CREATE TABLE conversion_history(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  amount DOUBLE,
+  source VARCHAR(10),
+  target VARCHAR(10),
+  result DOUBLE
+);
+
+Step 2: Download MySQL JDBC Driver
+
+You MUST add:
+
+mysql-connector-j.jar
+
+
+to your project classpath.
+
+Step 3: Update DB Username & Password
+
+In DBHelper:
+
+private static final String USER = "root";
+private static final String PASS = "your_password";
+
+
+Set your actual MySQL password.
+
+Step 4: Compile the Program
+
+If using command line:
+
+javac SmartCurrencyConverter.java
+
+Step 5: Run
+java SmartCurrencyConverter
+
+Step 6: Use the Program
+
+Example:
+
+Enter amount: 100
+From Currency: USD
+To Currency: INR
+
+
+Output:
+
+100 USD = 8300 INR
+✔ Conversion Saved to Database!
+--- Background Logging Thread Started ---
+Log: 100 USD -> 8300 INR
+--- Logging Completed ---
