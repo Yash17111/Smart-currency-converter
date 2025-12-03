@@ -1,0 +1,107 @@
+📂 Project Structure (SmartCurrencyConverter)
+
+Well-organized folder/file structure for your full Java OOP + JDBC + Multithreading project.
+
+SmartCurrencyConverter/
+│
+├── src/
+│   ├── ConverterService.java          # Interface for conversion service
+│   ├── InvalidCurrencyException.java  # Custom exception class
+│   ├── RateProvider.java              # Abstract base class
+│   ├── StaticRateProvider.java        # Child class that loads fixed rates
+│   ├── CurrencyConverter.java         # Implements ConverterService
+│   ├── ConversionRecord.java          # POJO model class
+│   ├── DBHelper.java                  # MySQL Database connectivity
+│   ├── ConversionDAO.java             # Handles saving conversion to DB
+│   ├── LoggerThread.java              # Background thread for logging
+│   └── SmartCurrencyConverter.java    # Main application
+│
+├── lib/
+│   └── mysql-connector-j.jar          # MySQL JDBC driver (required)
+│
+├── database/
+│   └── converterdb.sql                # SQL file (tables + database setup)
+│
+├── README.md                          # Project description & instructions
+│
+└── .gitignore                         # Excludes build and class files
+
+📘 Explanation of Each Component
+📁 src/
+
+Contains all Java .java source files.
+
+✔ Interface
+
+ConverterService.java
+Defines the method:
+
+double convert(double amount, String from, String to);
+
+✔ Custom Exception
+
+InvalidCurrencyException.java
+Handles invalid user currency input.
+
+✔ Abstraction + Inheritance
+
+RateProvider.java — Abstract class
+StaticRateProvider.java — Child class that loads static currency rates
+
+✔ Polymorphism
+
+CurrencyConverter.java
+Implements the interface and connects with the rate provider.
+
+✔ Data Model
+
+ConversionRecord.java
+Holds amount, from, to, result.
+
+✔ JDBC Layer
+
+DBHelper.java
+Creates MySQL connection using JDBC.
+
+ConversionDAO.java
+Inserts conversion records into database table.
+
+✔ Multithreading
+
+LoggerThread.java
+Prints conversion history asynchronously.
+
+✔ Main Application
+
+SmartCurrencyConverter.java
+Handles user input, conversions, DB save, threading, and history storage.
+
+📁 lib/ Folder
+
+Contains:
+
+mysql-connector-j.jar
+
+
+You must include this in classpath to run JDBC.
+
+📁 database/ Folder
+
+Contains:
+
+converterdb.sql
+
+
+This file includes:
+
+CREATE DATABASE converterdb;
+
+USE converterdb;
+
+CREATE TABLE conversion_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    amount DOUBLE,
+    source VARCHAR(10),
+    target VARCHAR(10),
+    result DOUBLE
+);
