@@ -1,28 +1,20 @@
 import java.sql.*;
 import java.util.*;
+import java.io.*;
+import java.net.*;
 
-// --------------------------------------------------------
-// 1. INTERFACE  (OOP Feature)
-// --------------------------------------------------------
 interface ConverterService {
     double convert(double amount, String from, String to) throws InvalidCurrencyException;
 }
 
-// --------------------------------------------------------
-// 2. CUSTOM EXCEPTION (OOP Feature)
-// --------------------------------------------------------
 class InvalidCurrencyException extends Exception {
     public InvalidCurrencyException(String msg) {
         super(msg);
     }
 }
 
-// --------------------------------------------------------
-// 3. BASE CLASS & INHERITANCE (OOP Feature)
-// --------------------------------------------------------
 abstract class RateProvider {
     protected Map<String, Double> rates = new HashMap<>();
-
     public abstract void loadRates();
 
     public double getRate(String c) throws InvalidCurrencyException {
@@ -32,11 +24,7 @@ abstract class RateProvider {
     }
 }
 
-// --------------------------------------------------------
-// 4. CHILD CLASS (Polymorphism & Inheritance)
-// --------------------------------------------------------
 class StaticRateProvider extends RateProvider {
-
     @Override
     public void loadRates() {
         rates.put("USD", 1.0);
@@ -49,11 +37,42 @@ class StaticRateProvider extends RateProvider {
     }
 }
 
-// --------------------------------------------------------
-// 5. SERVICE IMPLEMENTATION  (OOP + Polymorphism)
-// --------------------------------------------------------
-class CurrencyConverter implements ConverterService {
+class APIRateProvider extends RateProvider {
+    private final String API_KEY = "d64f4cdeaef576050832cc84";
 
+    @Override
+    public void loadRates() {}
+
+    @Override
+    public double getRate(String c) throws InvalidCurrencyException {
+        try {
+            String urlString = "https://v6.exchangerate-api.com/v6/" + API_KEY + "/pair/USD/" + c;
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            reader.close();
+
+            String json = response.toString();
+            int startIndex = json.indexOf("conversion_rate\":") + 17;
+            int endIndex = json.indexOf(",", startIndex);
+            if (endIndex == -1) endIndex = json.indexOf("}", startIndex);
+            
+            return Double.parseDouble(json.substring(startIndex, endIndex));
+
+        } catch (Exception e) {
+            throw new InvalidCurrencyException("Real-time rate unavailable for: " + c);
+        }
+    }
+}
+
+class CurrencyConverter implements ConverterService {
     private RateProvider provider;
 
     public CurrencyConverter(RateProvider p) {
@@ -68,9 +87,6 @@ class CurrencyConverter implements ConverterService {
     }
 }
 
-// --------------------------------------------------------
-// 6. COLLECTIONS + GENERICS (List<ConversionRecord>)
-// --------------------------------------------------------
 class ConversionRecord {
     double amount;
     String from, to;
@@ -84,11 +100,7 @@ class ConversionRecord {
     }
 }
 
-// --------------------------------------------------------
-// 7. DATABASE HELPER (JDBC)
-// --------------------------------------------------------
 class DBHelper {
-
     private static final String URL = "jdbc:mysql://localhost:3306/converterdb";
     private static final String USER = "root";
     private static final String PASS = "your_password";
@@ -98,14 +110,9 @@ class DBHelper {
     }
 }
 
-// --------------------------------------------------------
-// 8. DAO CLASS FOR DATABASE OPERATIONS (JDBC Implementation)
-// --------------------------------------------------------
 class ConversionDAO {
-
     public void saveRecord(ConversionRecord r) {
         try (Connection con = DBHelper.getConnection()) {
-
             String q = "INSERT INTO conversion_history(amount, source, target, result) VALUES(?,?,?,?)";
             PreparedStatement ps = con.prepareStatement(q);
             ps.setDouble(1, r.amount);
@@ -113,20 +120,14 @@ class ConversionDAO {
             ps.setString(3, r.to);
             ps.setDouble(4, r.result);
             ps.executeUpdate();
-
             System.out.println("✔ Conversion Saved to Database!");
-
         } catch (Exception e) {
             System.out.println("Database Error: " + e.getMessage());
         }
     }
 }
 
-// --------------------------------------------------------
-// 9. MULTITHREADING & SYNCHRONIZATION
-// --------------------------------------------------------
 class LoggerThread extends Thread {
-
     private List<ConversionRecord> logs;
 
     public LoggerThread(List<ConversionRecord> logs) {
@@ -145,54 +146,36 @@ class LoggerThread extends Thread {
     }
 }
 
-// --------------------------------------------------------
-// 10. MAIN APPLICATION (ALL FEATURES USED)
-// --------------------------------------------------------
 public class SmartCurrencyConverter {
-
     public static void main(String[] args) {
-
         Scanner sc = new Scanner(System.in);
-
-        // OOP Polymorphism
-        ConverterService converter = new CurrencyConverter(new StaticRateProvider());
-
-        // Collections + Generics
+        ConverterService converter = new CurrencyConverter(new APIRateProvider());
         List<ConversionRecord> history = new ArrayList<>();
-
-        // DAO
         ConversionDAO dao = new ConversionDAO();
 
         System.out.println("===== SMART CURRENCY CONVERTER =====");
 
         while (true) {
-
             System.out.print("\nEnter amount (or 0 to exit): ");
             double amount = sc.nextDouble();
             if (amount == 0) break;
 
-            System.out.print("From Currency (USD/INR/EUR/GBP/AUD/CAD/JPY): ");
+            System.out.print("From Currency: ");
             String from = sc.next().toUpperCase();
 
-            System.out.print("To Currency (USD/INR/EUR/GBP/AUD/CAD/JPY): ");
+            System.out.print("To Currency: ");
             String to = sc.next().toUpperCase();
 
             try {
                 double result = converter.convert(amount, from, to);
 
                 System.out.println("\n----------------------------------");
-                System.out.println(amount + " " + from + " = " + result + " " + to);
+                System.out.printf("%.2f %s = %.2f %s\n", amount, from, result, to);
                 System.out.println("----------------------------------");
 
                 ConversionRecord record = new ConversionRecord(amount, from, to, result);
-
-                // Add to collection
                 history.add(record);
-
-                // Save to DB
                 dao.saveRecord(record);
-
-                // Start logger thread
                 new LoggerThread(history).start();
 
             } catch (InvalidCurrencyException e) {
@@ -201,6 +184,6 @@ public class SmartCurrencyConverter {
         }
 
         sc.close();
-        System.out.println("Program Ended. Thank you!");
+        System.out.println("Program Ended.");
     }
 }
