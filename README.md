@@ -6,7 +6,7 @@ SmartCurrencyConverter is a professional-grade console application that demonstr
 ✔ Dynamic JDBC: Automatically creates and manages a MySQL Database.
 ✔ Secure Design: Handles sensitive credentials via runtime user input.
 ✔ Error Resilience: Uses custom exceptions to manage API and user input failures.
-
+ 
 
 
 🧩 Core Java Concepts Implemented1. 
