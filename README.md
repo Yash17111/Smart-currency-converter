@@ -1,63 +1,59 @@
-🚀 Project Overview: Smart Currency Converter
-SmartCurrencyConverter is a professional-grade console application that demonstrates the integration of real-world web services with local data persistence.
+# 🚀 Project Overview
 
-✔ Real-Time Data: Fetches live market rates via REST API.
-✔ Advanced OOP: Implements interfaces, inheritance, abstraction, and polymorphism.
-✔ Dynamic JDBC: Automatically creates and manages a MySQL Database.
-✔ Secure Design: Handles sensitive credentials via runtime user input.
-✔ Error Resilience: Uses custom exceptions to manage API and user input failures.
- 
+SmartCurrencyConverter is a console-based application that:
 
+✔ Converts money between different currencies
 
-🧩 Core Java Concepts Implemented1. 
-1.Object-Oriented Programming (OOP)
-->Interface: ConverterService (Defines the conversion contract).
-->Custom Exception: InvalidCurrencyException (Handles domain-specific errors).
-->Abstraction: RateProvider (Abstract base for fetching data).
-->Inheritance & Polymorphism: APIRateProvider extends RateProvider, allowing the CurrencyConverter to work with any provider type.
+✔ Uses real OOP structure (interfaces, inheritance, abstraction, polymorphism)
 
-2. Networking & API IntegrationREST API
-->Consumption: Uses HttpURLConnection to parse real-time JSON data from ExchangeRate-API.
-->Data Parsing: Manual string manipulation and index tracking to extract values from JSON strings.
+✔ Stores each conversion in a MySQL Database
 
-3. JDBC & Data PersistenceAutomated 
-->Setup: DBHelper uses SQL CREATE IF NOT EXISTS commands to set up the environment without manual SQL execution.
-->DAO Pattern: ConversionDAO abstracts the database logic from the main application flow.
+✔ Fetches live exchange rates via REST API
 
+✔ Demonstrates custom exceptions and error handling
 
+---
 
+### 🧩 Features Used (Complete Java Concepts)
 
+**1. Object-Oriented Programming** * Interface → `ConverterService`
 
-🛠 Technologies Used
-  Component        Technology
-->Language         Java 8+
-->Database         MySQL
-->Connectivity     JDBC(Java Database Connectivity)
-->API Service      ExchangeRate-API (v6)
-->Data Format      JSON
+* Custom Exception → `InvalidCurrencyException`
+* Abstraction → `RateProvider`
+* Inheritance & Polymorphism → `APIRateProvider`
 
+**2. JDBC Integration** Saves every conversion to MySQL using:
 
+`conversion_history(amount, source, target, result, time)`
 
+**3. API & Networking** Uses `HttpURLConnection` to fetch live data from ExchangeRate-API.
 
-📂 Project Structure
+---
+
+### 📂 Project Structure
+
+```text
 SmartCurrencyConverter
-    │
-    ├── ConverterService (Interface)
-    ├── InvalidCurrencyException (Custom Exception)
-    ├── RateProvider (Abstract Class)
-    ├── APIRateProvider (API Logic - Inheritance)
-    ├── CurrencyConverter (Service Implementation)
-    ├── DBHelper (Connection & Auto-Schema Setup)
-    ├── ConversionDAO (Database Operations)
-    └── SmartCurrencyConverter (Main Entry Point)
+│
+├── ConverterService (Interface)
+├── InvalidCurrencyException (Custom Exception)
+├── RateProvider (Abstract Class)
+├── APIRateProvider (API Logic)
+├── CurrencyConverter (Service Implementation)
+├── DBHelper (Database Setup)
+├── ConversionDAO (Database Operations)
+└── SmartCurrencyConverter (Main Class)
 
+```
 
+---
 
+### 🗃 Database Setup
 
-🗃 Database Architecture
-The application is "Self-Healing." While it creates the table automatically, the schema used is:
+The program creates the database automatically, but here is the schema for reference:
 
-SQLCREATE DATABASE IF NOT EXISTS converterdb;
+```sql
+CREATE DATABASE IF NOT EXISTS converterdb;
 USE converterdb;
 
 CREATE TABLE IF NOT EXISTS conversion_history (
@@ -69,27 +65,13 @@ CREATE TABLE IF NOT EXISTS conversion_history (
     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+```
 
+---
 
+### ▶️ How to Run
 
-▶️ How to Run
-1.Ensure MySQL Server is running on your machine.
+1. **Add MySQL JDBC Driver** to your project classpath.
+2. **Compile the Java file:** `javac SmartCurrencyConverter.java`
+3. **Run the program:** `java -cp ".;mysql-connector-j-x.x.x.jar" SmartCurrencyConverter
 
-2.Add the MySQL JDBC Driver (Connector/J) to your project classpath.
-
-3.Compile:
-javac SmartCurrencyConverter.java
-
-4.Run:
-java -cp ".;mysql-connector-j-x.x.x.jar" SmartCurrencyConverter
-
-5.Enter your MySQL root password when prompted.
-🧪 Sample Output
-Enter MySQL Root Password: ****
-✔ Database system initialized.
-
-Enter amount (0 to exit): 100
-From (e.g. USD): USD
-To (e.g. INR): INR
-
-Result: 100.00 USD = 8345.50 INR
