@@ -1,107 +1,46 @@
 📂 Project Structure (SmartCurrencyConverter)
+Well-organized folder/file structure for your full Java OOP + JDBC + Live API project.
 
-Well-organized folder/file structure for your full Java OOP + JDBC + Multithreading project.
+Files in this Repository: * SmartCurrencyConverter.java — Main application containing all logic classes.
 
-SmartCurrencyConverter/
-│
-├── src/
-│   ├── ConverterService.java          # Interface for conversion service
-│   ├── InvalidCurrencyException.java  # Custom exception class
-│   ├── RateProvider.java              # Abstract base class
-│   ├── StaticRateProvider.java        # Child class that loads fixed rates
-│   ├── CurrencyConverter.java         # Implements ConverterService
-│   ├── ConversionRecord.java          # POJO model class
-│   ├── DBHelper.java                  # MySQL Database connectivity
-│   ├── ConversionDAO.java             # Handles saving conversion to DB
-│   ├── LoggerThread.java              # Background thread for logging
-│   └── SmartCurrencyConverter.java    # Main application
-│
-├── lib/
-│   └── mysql-connector-j.jar          # MySQL JDBC driver (required)
-│
-├── database/
-│   └── converterdb.sql                # SQL file (tables + database setup)
-│
-├── README.md                          # Project description & instructions
-│
-└── .gitignore                         # Excludes build and class files
+database.sql — SQL file for manual database/table verification.
+
+README.md — Project description, technical details, and instructions.
+
+mysql-connector-j.jar — MySQL JDBC driver (Required for connectivity).
 
 📘 Explanation of Each Component
-📁 src/
-
-Contains all Java .java source files.
-
-✔ Interface
-
-ConverterService.java
-Defines the method:
+1. Interface & Exceptions * ConverterService Defines the core contract for the conversion logic:
 
 double convert(double amount, String from, String to);
 
-✔ Custom Exception
+InvalidCurrencyException Custom exception class that handles errors when an unsupported or incorrect currency code is entered.
 
-InvalidCurrencyException.java
-Handles invalid user currency input.
+2. Abstraction & Inheritance (Rate Providers) * RateProvider (Abstract Class) The base template for any system that provides exchange rates.
 
-✔ Abstraction + Inheritance
+APIRateProvider (Child Class) Inherits from RateProvider. It contains the logic to connect to the ExchangeRate-API and fetch real-time data using HttpURLConnection.
 
-RateProvider.java — Abstract class
-StaticRateProvider.java — Child class that loads static currency rates
+3. Service Implementation & Polymorphism * CurrencyConverter Implements the ConverterService. It is polymorphic because it can work with any class that extends RateProvider.
 
-✔ Polymorphism
+4. Database Layer (JDBC) * DBHelper Handles the "Smart Setup." It checks if converterdb exists and creates it automatically using the root password provided by the user.
 
-CurrencyConverter.java
-Implements the interface and connects with the rate provider.
+ConversionDAO Data Access Object that handles the SQL INSERT operations to save history into the MySQL table.
 
-✔ Data Model
+5. Main Entry Point * SmartCurrencyConverter The driver class. It manages the user interface (Scanner), initializes the database system, and triggers the conversion flow.
 
-ConversionRecord.java
-Holds amount, from, to, result.
+🗃 Database Blueprint
+Even though the code creates the table automatically, the schema is:
 
-✔ JDBC Layer
+SQL
 
-DBHelper.java
-Creates MySQL connection using JDBC.
-
-ConversionDAO.java
-Inserts conversion records into database table.
-
-✔ Multithreading
-
-LoggerThread.java
-Prints conversion history asynchronously.
-
-✔ Main Application
-
-SmartCurrencyConverter.java
-Handles user input, conversions, DB save, threading, and history storage.
-
-📁 lib/ Folder
-
-Contains:
-
-mysql-connector-j.jar
-
-
-You must include this in classpath to run JDBC.
-
-📁 database/ Folder
-
-Contains:
-
-converterdb.sql
-
-
-This file includes:
-
-CREATE DATABASE converterdb;
-
+CREATE DATABASE IF NOT EXISTS converterdb;
 USE converterdb;
 
-CREATE TABLE conversion_history (
+CREATE TABLE IF NOT EXISTS conversion_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     amount DOUBLE,
     source VARCHAR(10),
     target VARCHAR(10),
-    result DOUBLE
+    result DOUBLE,
+    time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
