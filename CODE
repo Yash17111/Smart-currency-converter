@@ -8,41 +8,21 @@ interface ConverterService {
 }
 
 class InvalidCurrencyException extends Exception {
-    public InvalidCurrencyException(String msg) {
-        super(msg);
-    }
+    public InvalidCurrencyException(String msg) { super(msg); }
 }
 
 abstract class RateProvider {
     protected Map<String, Double> rates = new HashMap<>();
     public abstract void loadRates();
-
     public double getRate(String c) throws InvalidCurrencyException {
-        if (!rates.containsKey(c))
-            throw new InvalidCurrencyException("Invalid Currency Code: " + c);
+        if (!rates.containsKey(c)) throw new InvalidCurrencyException("Invalid Currency: " + c);
         return rates.get(c);
-    }
-}
-
-class StaticRateProvider extends RateProvider {
-    @Override
-    public void loadRates() {
-        rates.put("USD", 1.0);
-        rates.put("INR", 83.0);
-        rates.put("EUR", 0.92);
-        rates.put("GBP", 0.79);
-        rates.put("AUD", 1.49);
-        rates.put("CAD", 1.33);
-        rates.put("JPY", 151.20);
     }
 }
 
 class APIRateProvider extends RateProvider {
     private final String API_KEY = "d64f4cdeaef576050832cc84";
-
-    @Override
-    public void loadRates() {}
-
+    @Override public void loadRates() {}
     @Override
     public double getRate(String c) throws InvalidCurrencyException {
         try {
@@ -50,22 +30,16 @@ class APIRateProvider extends RateProvider {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-
             BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder response = new StringBuilder();
             String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
+            while ((line = reader.readLine()) != null) response.append(line);
             reader.close();
-
             String json = response.toString();
             int startIndex = json.indexOf("conversion_rate\":") + 17;
             int endIndex = json.indexOf(",", startIndex);
             if (endIndex == -1) endIndex = json.indexOf("}", startIndex);
-            
             return Double.parseDouble(json.substring(startIndex, endIndex));
-
         } catch (Exception e) {
             throw new InvalidCurrencyException("Real-time rate unavailable for: " + c);
         }
@@ -74,116 +48,71 @@ class APIRateProvider extends RateProvider {
 
 class CurrencyConverter implements ConverterService {
     private RateProvider provider;
-
-    public CurrencyConverter(RateProvider p) {
-        this.provider = p;
-        provider.loadRates();
-    }
-
+    public CurrencyConverter(RateProvider p) { this.provider = p; provider.loadRates(); }
     @Override
     public double convert(double amount, String from, String to) throws InvalidCurrencyException {
-        double usd = amount / provider.getRate(from);
-        return usd * provider.getRate(to);
-    }
-}
-
-class ConversionRecord {
-    double amount;
-    String from, to;
-    double result;
-
-    public ConversionRecord(double amount, String from, String to, double result) {
-        this.amount = amount;
-        this.from = from;
-        this.to = to;
-        this.result = result;
+        return (amount / provider.getRate(from)) * provider.getRate(to);
     }
 }
 
 class DBHelper {
-    private static final String URL = "jdbc:mysql://localhost:3306/converterdb";
-    private static final String USER = "root";
-    private static final String PASS = "";
+    private static final String BASE_URL = "jdbc:mysql://localhost:3306/";
+    private static final String DB_NAME = "converterdb";
+    public static String password = "";
+
+    public static void initializeSystem() {
+        try (Connection con = DriverManager.getConnection(BASE_URL, "root", password);
+             Statement stmt = con.createStatement()) {
+            stmt.executeUpdate("CREATE DATABASE IF NOT EXISTS " + DB_NAME);
+            stmt.executeUpdate("USE " + DB_NAME);
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS conversion_history (" +
+                    "id INT AUTO_INCREMENT PRIMARY KEY, amount DOUBLE, source VARCHAR(10), " +
+                    "target VARCHAR(10), result DOUBLE, time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+            System.out.println("✔ Database system initialized.");
+        } catch (SQLException e) {
+            System.out.println("⚠ Database Setup Warning: " + e.getMessage());
+        }
+    }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASS);
+        return DriverManager.getConnection(BASE_URL + DB_NAME, "root", password);
     }
 }
 
 class ConversionDAO {
-    public void saveRecord(ConversionRecord r) {
+    public void save(double amt, String f, String t, double res) {
         try (Connection con = DBHelper.getConnection()) {
             String q = "INSERT INTO conversion_history(amount, source, target, result) VALUES(?,?,?,?)";
             PreparedStatement ps = con.prepareStatement(q);
-            ps.setDouble(1, r.amount);
-            ps.setString(2, r.from);
-            ps.setString(3, r.to);
-            ps.setDouble(4, r.result);
+            ps.setDouble(1, amt); ps.setString(2, f); ps.setString(3, t); ps.setDouble(4, res);
             ps.executeUpdate();
-            System.out.println("✔ Conversion Saved to Database!");
-        } catch (Exception e) {
-            System.out.println("Database Error: " + e.getMessage());
-        }
-    }
-}
-
-class LoggerThread extends Thread {
-    private List<ConversionRecord> logs;
-
-    public LoggerThread(List<ConversionRecord> logs) {
-        this.logs = logs;
-    }
-
-    @Override
-    public void run() {
-        synchronized (logs) {
-            System.out.println("\n--- Background Logging Thread Started ---");
-            for (ConversionRecord r : logs) {
-                System.out.println("Log: " + r.amount + " " + r.from + " -> " + r.result + " " + r.to);
-            }
-            System.out.println("--- Logging Completed ---\n");
-        }
+        } catch (Exception ignored) {}
     }
 }
 
 public class SmartCurrencyConverter {
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
+        System.out.print("Enter MySQL Root Password: ");
+        DBHelper.password = sc.nextLine();
+        DBHelper.initializeSystem();
+
         ConverterService converter = new CurrencyConverter(new APIRateProvider());
-        List<ConversionRecord> history = new ArrayList<>();
         ConversionDAO dao = new ConversionDAO();
 
-        System.out.println("===== SMART CURRENCY CONVERTER =====");
-
         while (true) {
-            System.out.print("\nEnter amount (or 0 to exit): ");
+            System.out.print("\nEnter amount (0 to exit): ");
             double amount = sc.nextDouble();
             if (amount == 0) break;
-
-            System.out.print("From Currency: ");
-            String from = sc.next().toUpperCase();
-
-            System.out.print("To Currency: ");
-            String to = sc.next().toUpperCase();
+            System.out.print("From (e.g. USD): "); String from = sc.next().toUpperCase();
+            System.out.print("To (e.g. INR): "); String to = sc.next().toUpperCase();
 
             try {
                 double result = converter.convert(amount, from, to);
-
-                System.out.println("\n----------------------------------");
-                System.out.printf("%.2f %s = %.2f %s\n", amount, from, result, to);
-                System.out.println("----------------------------------");
-
-                ConversionRecord record = new ConversionRecord(amount, from, to, result);
-                history.add(record);
-                dao.saveRecord(record);
-                new LoggerThread(history).start();
-
-            } catch (InvalidCurrencyException e) {
-                System.out.println("Error: " + e.getMessage());
-            }
+                System.out.printf("\nResult: %.2f %s = %.2f %s\n", amount, from, result, to);
+                dao.save(amount, from, to, result);
+            } catch (InvalidCurrencyException e) { System.out.println(e.getMessage()); }
         }
-
         sc.close();
-        System.out.println("Program Ended.");
     }
 }
